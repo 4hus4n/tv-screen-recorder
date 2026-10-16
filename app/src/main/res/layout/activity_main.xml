@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#12151C"
+    android:orientation="horizontal"
+    android:padding="48dp">
+
+    <!-- Left: controls -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:layout_marginEnd="32dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="#FFFFFF"
+            android:textSize="34sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Ready"
+            android:textColor="#9AA3B2"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/recordBtn"
+            android:layout_width="360dp"
+            android:layout_height="72dp"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/btn_bg"
+            android:text="● Start recording"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/qualityBtn"
+            style="@style/OptionBtn"
+            android:layout_marginTop="24dp" />
+
+        <Button
+            android:id="@+id/audioBtn"
+            style="@style/OptionBtn" />
+
+        <Button
+            android:id="@+id/timerBtn"
+            style="@style/OptionBtn" />
+
+        <TextView
+            android:id="@+id/storage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:textColor="#6F7889"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/error"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#FF8A80"
+            android:textSize="16sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Right: phone access -->
+    <LinearLayout
+        android:layout_width="380dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/panel_bg"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Watch on your phone"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/qr"
+            android:layout_width="240dp"
+            android:layout_height="240dp"
+            android:layout_marginTop="18dp"
+            android:background="#FFFFFF"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/url"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="#E0E4EA"
+            android:textIsSelectable="false"
+            android:textSize="17sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Scan with your phone camera.\nPhone and TV must be on the same Wi-Fi."
+            android:textColor="#8A93A3"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

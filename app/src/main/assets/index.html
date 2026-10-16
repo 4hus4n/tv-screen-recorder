@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12151c">
+<title>TV Recorder</title>
+<style>
+  :root{--bg:#12151c;--card:#1b1f27;--line:#2a2f3a;--text:#e8ebf0;--muted:#8a93a3;--red:#e53935}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+  header{position:sticky;top:0;z-index:5;background:rgba(18,21,28,.92);backdrop-filter:blur(8px);padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:20px;display:flex;align-items:center;gap:8px}
+  h1 .dot{width:12px;height:12px;border-radius:50%;background:var(--red)}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .bar{display:none;margin:12px 16px 0;padding:12px 14px;border-radius:12px;background:#2a1416;border:1px solid #5c2226;align-items:center;gap:10px}
+  .bar.show{display:flex}
+  .bar.saving{background:#2a2614;border-color:#5c5222}
+  .pulse{width:10px;height:10px;border-radius:50%;background:#ff5252;animation:p 1s infinite}
+  @keyframes p{50%{opacity:.25}}
+  .bar .t{flex:1;font-size:15px}
+  .bar button{background:var(--red);color:#fff;border:0;border-radius:9px;padding:9px 16px;font-size:15px;font-weight:600}
+  main{padding:14px 16px 40px;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  .thumb{position:relative;aspect-ratio:16/9;background:#0c0e13 center/cover no-repeat;display:grid;place-items:center;cursor:pointer}
+  .thumb .play{width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center}
+  .thumb .play:after{content:"";margin-left:5px;border-left:18px solid #fff;border-top:11px solid transparent;border-bottom:11px solid transparent}
+  .thumb .dur{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.75);font-size:12px;padding:2px 6px;border-radius:5px}
+  .thumb .live{position:absolute;left:8px;top:8px;background:var(--red);font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}
+  .info{padding:10px 12px 12px}
+  .name{font-size:15px;font-weight:600}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .actions{display:flex;gap:8px;margin-top:10px}
+  .actions a,.actions button{flex:1;text-align:center;text-decoration:none;font-size:14px;padding:9px 0;border-radius:9px;border:1px solid var(--line);background:#232833;color:var(--text)}
+  .actions .del{flex:0 0 44px;color:#ff8a80}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 10px}
+  .modal{position:fixed;inset:0;background:#000;z-index:10;display:none;flex-direction:column}
+  .modal.show{display:flex}
+  .modal .top{display:flex;align-items:center;gap:10px;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}
+  .modal .top span{flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modal .top button,.modal .top a{background:#232833;color:#fff;border:0;border-radius:9px;padding:8px 14px;font-size:14px;text-decoration:none}
+  .modal video{flex:1;width:100%;min-height:0;background:#000}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2a2f3a;padding:10px 16px;border-radius:10px;font-size:14px;display:none;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot"></span>TV Recorder</h1>
+  <div class="sub" id="sub">Loading…</div>
+</header>
+
+<div class="bar" id="bar">
+  <span class="pulse" id="pulse"></span>
+  <span class="t" id="barText">Recording</span>
+  <button id="stopBtn">Stop</button>
+</div>
+
+<main id="list"></main>
+
+<div class="modal" id="modal">
+  <div class="top">
+    <button id="closeBtn">✕ Close</button>
+    <span id="mTitle"></span>
+    <a id="mDl" download>Download</a>
+  </div>
+  <video id="player" controls playsinline preload="metadata"></video>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const K = "__KEY__";
+const u = (p) => p + (p.includes("?") ? "&" : "?") + "k=" + K;
+const $ = (id) => document.getElementById(id);
+let wasBusy = false;
+
+function size(b){ const mb=b/1048576; return mb>=1024 ? (mb/1024).toFixed(2)+" GB" : mb.toFixed(mb<10?1:0)+" MB"; }
+function clock(s){ s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return (h? h+":"+String(m).padStart(2,"0") : String(m).padStart(2,"0"))+":"+String(x).padStart(2,"0"); }
+function title(name){
+  const m = name.match(/REC_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+  if(!m) return name;
+  const d = new Date(+m[1], m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})+" · "+
+         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2500); }
+function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function load(){
+  try{
+    const items = await (await fetch(u("/api/list"))).json();
+    const total = items.reduce((a,i)=>a+i.size,0);
+    $("sub").textContent = items.length+" recording"+(items.length===1?"":"s")+" · "+size(total);
+    const list = $("list");
+    if(!items.length){ list.innerHTML='<div class="empty">No recordings yet.<br>Press “Start recording” on the TV.</div>'; return; }
+    list.innerHTML = items.map(i=>{
+      const n = esc(i.name), v = encodeURIComponent(i.name);
+      if(i.recording) return `<div class="card"><div class="thumb"><span class="live">● REC</span></div>
+        <div class="info"><div class="name">${title(i.name)}</div><div class="meta">Recording now · ${size(i.size)}</div></div></div>`;
+      return `<div class="card">
+        <div class="thumb" data-play="${n}" style="background-image:url('${u("/t/"+v)}')">
+          <span class="play"></span>${i.duration?`<span class="dur">${clock(i.duration/1000)}</span>`:""}
+        </div>
+        <div class="info">
+          <div class="name">${title(i.name)}</div>
+          <div class="meta">${size(i.size)}</div>
+          <div class="actions">
+            <button data-play="${n}">Play</button>
+            <a href="${u("/v/"+v+"?dl=1")}" download="${n}">Download</a>
+            <button class="del" data-del="${n}" aria-label="Delete">🗑</button>
+          </div>
+        </div></div>`;
+    }).join("");
+  }catch(e){ $("sub").textContent = "Can't reach the TV. Is TV Recorder open and on the same Wi-Fi?"; }
+}
+
+async function status(){
+  try{
+    const s = await (await fetch(u("/api/status"))).json();
+    const bar = $("bar");
+    if(s.recording){
+      bar.className="bar show"; $("pulse").style.display=""; $("stopBtn").style.display="";
+      let t = "Recording "+clock(s.elapsed);
+      if(s.remaining>=0) t += " · stops in "+clock(s.remaining);
+      if(!s.audio) t += " · no sound";
+      $("barText").textContent = t;
+    } else if(s.saving){
+      bar.className="bar show saving"; $("pulse").style.display="none"; $("stopBtn").style.display="none";
+      $("barText").textContent = "Saving recording…";
+    } else {
+      bar.className="bar";
+    }
+    const busy = s.recording || s.saving;
+    if(wasBusy !== busy){ wasBusy = busy; load(); }
+  }catch(e){}
+}
+
+$("stopBtn").onclick = async ()=>{
+  $("stopBtn").disabled = true;
+  try{ await fetch(u("/api/stop"),{method:"POST"}); toast("Stopping…"); }catch(e){ toast("Couldn't reach the TV"); }
+  setTimeout(()=>{ $("stopBtn").disabled=false; status(); }, 800);
+};
+
+$("list").addEventListener("click", async (e)=>{
+  const p = e.target.closest("[data-play]");
+  if(p){ open(p.dataset.play); return; }
+  const d = e.target.closest("[data-del]");
+  if(d){
+    if(!confirm("Delete this recording from the TV?")) return;
+    const r = await fetch(u("/api/delete?name="+encodeURIComponent(d.dataset.del)),{method:"POST"});
+    toast(r.ok ? "Deleted" : "Couldn't delete");
+    load();
+  }
+});
+
+function open(name){
+  const v = encodeURIComponent(name);
+  $("mTitle").textContent = title(name);
+  $("mDl").href = u("/v/"+v+"?dl=1");
+  $("mDl").setAttribute("download", name);
+  $("player").src = u("/v/"+v);
+  $("modal").classList.add("show");
+  $("player").play().catch(()=>{});
+}
+$("closeBtn").onclick = ()=>{
+  const p=$("player"); p.pause(); p.removeAttribute("src"); p.load();
+  $("modal").classList.remove("show");
+};
+
+load(); status();
+setInterval(status, 2000);
+</script>
+</body>
+</html>
