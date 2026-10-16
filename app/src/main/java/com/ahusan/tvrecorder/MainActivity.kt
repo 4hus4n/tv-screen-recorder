@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
         url = findViewById(R.id.url)
 
         (application as App).startServer()
+        ServerService.start(this) // keep phone access on after the app is closed
 
         recordBtn.setOnClickListener {
             if (RecState.recording) RecorderService.requestStop() else startFlow()
